@@ -1,19 +1,7 @@
-source 'http://rubygems.org'
+source 'https://rubygems.org'
 
-group :test do
-  gem 'ffaker'
-  gem 'rspec'
-  gem 'simplecov', require: false
-  gem 'guard-rspec'
-  gem 'growl'
-end
-
-if RUBY_VERSION < "1.9"
-  gem "ruby-debug"
-else
-  gem "ruby-debug19"
-end
+gem 'spree', github: 'spree/spree', branch: '2-3-stable'
+# Provides basic authentication functionality for testing parts of your engine
+gem 'spree_auth_devise', github: 'spree/spree_auth_devise', branch: '2-3-stable'
 
 gemspec
-
-gem 'spree', git: 'https://github.com/spree/spree.git', branch: '1-0-stable'

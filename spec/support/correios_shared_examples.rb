@@ -1,27 +1,32 @@
+require 'spree/testing_support/factories'
 shared_examples_for "correios calculator" do
   before { @calculator = subject.class.new }
 
-  it "should have preferences" do
-    @calculator.preferences.keys.should include(:zipcode, :declared_value, :receipt_notification, :receive_in_hands, :token, :password)
+  it "has preferences" do
+    expect(@calculator.preferences.keys).to include(:zipcode, :declared_value, :receipt_notification, :receive_in_hands, :token, :password)
   end
 
-  it "delcared value should default to false" do
-    @calculator.preferred(:declared_value).should == false
+  it "declared value should default to false" do
+     expect(@calculator.preferred_declared_value).to be false
   end
-  
+
   it "receipt notification should default to false" do
-    @calculator.preferred(:receipt_notification).should == false
+    expect(@calculator.preferred_receipt_notification).to be false
   end
 
   it "receive in hands should default to false" do
-    @calculator.preferred(:receive_in_hands).should == false
+    expect(@calculator.preferred_receive_in_hands).to be false
   end
+
+  it "has not a contract" do
+    expect(@calculator).to_not have_contract
+  end
+
   
   it "should have a contract if both token and password are given" do
-    @calculator.should_not have_contract
     @calculator.preferred_token = "some token"
     @calculator.preferred_password = "some password"
-    @calculator.should have_contract
+    expect(@calculator).to have_contract
   end
   
   context "compute" do
@@ -33,26 +38,24 @@ shared_examples_for "correios calculator" do
     end
     
     before do
-      items = [double(weight: 1, length: 20, width: 15, height: 5)]
-      @order = double("Order", line_items: items, amount: BigDecimal("2000,00"), ship_address: stub(zipcode: "72151613"))
+      @order = FactoryGirl.create(:order_with_line_items, line_items_count: 1 , ship_address: FactoryGirl.create(:ship_address, zipcode: '72151613'))
       @calculator.preferred_zipcode = "71939360"
     end
     
     it "should calculate shipping cost and delivery time" do
       if @calculator.class.name != "Spree::Calculator::CorreiosBaseCalculator"
         price, prazo = get_correios_price_and_value_for("http://ws.correios.com.br/calculador/CalcPrecoPrazo.aspx?nCdEmpresa=&sDsSenha=&sCepOrigem=71939360&sCepDestino=72151613&nVlPeso=1&nCdFormato=1&nVlComprimento=20&nVlAltura=5&nVlLargura=15&sCdMaoPropria=n&nVlValorDeclarado=0&sCdAvisoRecebimento=n&nCdServico=#{@calculator.shipping_code}&nVlDiametro=0&StrRetorno=xml")
-
-        @calculator.compute(@order).should == price
-        @calculator.delivery_time.should == prazo
+        expect(@calculator.compute_package(@order)).to eq(price)
+        expect(@calculator.delivery_time).to eq(prazo)
       end
     end
     
     it "should change price according to declared value" do
       if @calculator.class.name != "Spree::Calculator::CorreiosBaseCalculator"
-        price, prazo = get_correios_price_and_value_for("http://ws.correios.com.br/calculador/CalcPrecoPrazo.aspx?nCdEmpresa=&sDsSenha=&sCepOrigem=71939360&sCepDestino=72151613&nVlPeso=1&nCdFormato=1&nVlComprimento=20&nVlAltura=5&nVlLargura=15&sCdMaoPropria=n&nVlValorDeclarado=2000,00&sCdAvisoRecebimento=n&nCdServico=#{@calculator.shipping_code}&nVlDiametro=0&StrRetorno=xml")
+        price, prazo = get_correios_price_and_value_for("http://ws.correios.com.br/calculador/CalcPrecoPrazo.aspx?nCdEmpresa=&sDsSenha=&sCepOrigem=71939360&sCepDestino=72151613&nVlPeso=1&nCdFormato=1&nVlComprimento=20&nVlAltura=5&nVlLargura=15&sCdMaoPropria=n&nVlValorDeclarado=10,00&sCdAvisoRecebimento=n&nCdServico=#{@calculator.shipping_code}&nVlDiametro=0&StrRetorno=xml")
 
         @calculator.preferred_declared_value = true
-        @calculator.compute(@order).should == price
+        expect(@calculator.compute_package(@order)).to eq(price)
       end
     end
     
@@ -61,7 +64,7 @@ shared_examples_for "correios calculator" do
         price, prazo = get_correios_price_and_value_for("http://ws.correios.com.br/calculador/CalcPrecoPrazo.aspx?nCdEmpresa=&sDsSenha=&sCepOrigem=71939360&sCepDestino=72151613&nVlPeso=1&nCdFormato=1&nVlComprimento=20&nVlAltura=5&nVlLargura=15&sCdMaoPropria=s&nVlValorDeclarado=0&sCdAvisoRecebimento=n&nCdServico=#{@calculator.shipping_code}&nVlDiametro=0&StrRetorno=xml")
 
         @calculator.preferred_receive_in_hands = true
-        @calculator.compute(@order).should == price
+        expect(@calculator.compute_package(@order)).to eq(price)
       end
     end
 
@@ -70,7 +73,7 @@ shared_examples_for "correios calculator" do
         price, prazo = get_correios_price_and_value_for("http://ws.correios.com.br/calculador/CalcPrecoPrazo.aspx?nCdEmpresa=&sDsSenha=&sCepOrigem=71939360&sCepDestino=72151613&nVlPeso=1&nCdFormato=1&nVlComprimento=20&nVlAltura=5&nVlLargura=15&sCdMaoPropria=n&nVlValorDeclarado=0&sCdAvisoRecebimento=s&nCdServico=#{@calculator.shipping_code}&nVlDiametro=0&StrRetorno=xml")
 
         @calculator.preferred_receipt_notification = true
-        @calculator.compute(@order).should == price
+        expect(@calculator.compute_package(@order)).to eq(price)
       end
     end    
   end
